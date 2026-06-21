@@ -292,6 +292,14 @@ def test_to_coordinate_space():
     print(abs(rho_coord_exact - rho_coord).max())
     assert np.allclose(rho_coord_exact, rho_coord)
 
+def test_H_eff():
+    #H_eff = SHO.H_eff(n, w, hbar, m, m_e)
+    H_eff = SHO.H_eff(2, 1, 1, 1, 0.9)
+    H_eff_exact = np.zeros((2,2), dtype=np.complex128)
+    coeff = 1/4 + 1/0.9 *(1/4)
+    H_eff_exact[0][0] = coeff * 1
+    H_eff_exact[1][1] = coeff * 3
+    assert np.allclose(H_eff, H_eff_exact)
 
 if __name__ == "__main__":
     pass   

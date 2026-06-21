@@ -226,13 +226,13 @@ def test_R_pq():
     assert np.allclose(Hams.R_pq(1, T = 5, w_c = 0.5, gamma_s = 0.2), 3.3177230510018835)
 
 def test_R_qq():
-    assert np.allclose(Hams.R_qq(1000, T = 1, w_c = 1, gamma_s = 0.1), 0.28645833333333333) 
+    assert np.allclose(Hams.R_qq(1000, T = 1, w_c = 1, gamma_s = 0.1), 0.14322916666666667) 
     assert np.allclose(Hams.R_qq(0, T = 1, w_c = 1, gamma_s = 0.1), 0)
-    assert np.allclose(Hams.R_qq(1, T = 1, w_c = 1, gamma_s = 0.1), 0.015463033098088407 )
-    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 1, gamma_s = 0.1), 0.082669850004023584)
-    assert np.allclose(Hams.R_qq(1, T = 1, w_c = 1, gamma_s = 0.2), 0.031960910051200621)
-    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 1, gamma_s = 0.2), 0.17087227474482244)
-    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 0.5, gamma_s = 0.2), 0.058170929646053914)
+    assert np.allclose(Hams.R_qq(1, T = 1, w_c = 1, gamma_s = 0.1), 0.0077315165490442034)
+    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 1, gamma_s = 0.1), 0.04133492500201179)
+    assert np.allclose(Hams.R_qq(1, T = 1, w_c = 1, gamma_s = 0.2), 0.015980455025600311)
+    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 1, gamma_s = 0.2), 0.085436137372411218)
+    assert np.allclose(Hams.R_qq(1, T = 5, w_c = 0.5, gamma_s = 0.2), 0.029085464823026957)
 
 def test_R_pp():
     assert np.allclose(Hams.R_pp(1000, T = 1, w_c = 1, gamma_s = 0.1), 15.947151495775877) 
@@ -256,7 +256,7 @@ def test_GQFPE_S():
     A = -0.125j
     D_pq = 0.1 * 1.7399659187787281
     D_pp = -.01 * 15.947151495775877
-    D_qq = -0.28645833333333333
+    D_qq = -0.14322916666666667
     # for i in range(4):
     #    GQFPE_SH_exact[i][i] += D_pp + D_qq
 
@@ -288,7 +288,7 @@ def test_GQFPE():
     A = -1j * 0.1 * 0.16698133234966612 
     D_pq = 0.1 * 3.3177230510018835
     D_pp = -.01 * 38.292660937228488
-    D_qq = -0.058170929646053914
+    D_qq = -0.029085464823026957
     H_val = -1j/4 * ( -2 - 2/(1-0.014387677966970687*0.4))
     
     # for i in range(4):
@@ -311,4 +311,34 @@ def test_GQFPE():
     print(D_pp, "D_pp")
     print(D_qq, "D_qq")
     assert np.allclose(GQFPE_exact, GQFPE)
+
+def test_H_term_int():
+    H_term_int = Hams.H_term_int(0, 2, 1, 1, 1, 1, 0.1)
+    H_term_int_exact = np.zeros((2,2), dtype=np.complex128)
+    H_term_int_exact[0][0] = 1/2
+    H_term_int_exact[1][1] = 3/2
+    H_term_int_exact *= -1j
+    assert np.allclose(H_term_int_exact, H_term_int)
+    H_term_int = Hams.H_term_int(1000, 2, 1, 1, 1, 1, 0.1)
+    coeff = 1/4 + 1/0.8*(1/4)
+    H_term_int_exact = np.zeros((2,2), dtype=np.complex128)
+    H_term_int_exact[0][0] = coeff * 1
+    H_term_int_exact[1][1] = coeff * 3
+    H_term_int_exact *= -1j
+    assert np.allclose(H_term_int_exact, H_term_int)
+
+def test_GQFPE_int():
+    
+    I = np.eye(2, dtype=np.complex128)
+    GQFPE_int = Hams.GQFPE_int(0, I, **params)
+    H_term_int = Hams.H_term_int(0, **params)
+    GQFPE_int_exact = Hams.GQFPE(0, **params) - np.kron(H_term_int, I) + np.kron(I, H_term_int.T)
+    print(GQFPE_int_exact, "is exact")
+    print(GQFPE_int, "is function")
+    print(GQFPE_int_exact - GQFPE_int, "is difference")
+    print(Hams.GQFPE(0, **params), "is original GQFPE")
+    print(Hams.H_term_int(0, **params), "is the H_term_int")
+    assert np.allclose(GQFPE_int_exact, GQFPE_int)
+
+
 #def test_Rp

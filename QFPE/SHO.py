@@ -304,7 +304,8 @@ def H_eff(n=100, w=1, hbar=1, m=1, m_es = .8):
             hbar=hbar,
             m=m
             )
-    x_matrix = x(n=n + 1,
+    x_matrix = x(
+            n=n + 1,
             w=w,
             hbar=hbar,
             m=m

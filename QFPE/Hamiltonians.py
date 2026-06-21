@@ -1,6 +1,7 @@
 '''
 Defines the Hamiltonian and superoperators corresponding to each QFPE
 '''
+import functools
 import numba
 import numpy as np
 import scipy
@@ -23,6 +24,7 @@ import SHO
 #                                                 )
 #     )
 
+@functools.cache
 def A_term(n=100, w=1, hbar=1, m=1):
     '''
     Returns the matrix superoperator corresponding to the [x,{p,\rho}] term.
@@ -33,6 +35,8 @@ def A_term(n=100, w=1, hbar=1, m=1):
     I = np.eye(n, dtype=np.complex128)
     return np.kron(xp, I) + np.kron(x, p.T) - np.kron(p, x.T) - np.kron(I, px.T)  
 
+
+@functools.cache
 def D_pq_term(n=100, w=1, hbar=1, m=1):
     '''
     Returns the matrix superoperator corresponding to the [x,[p,\rho]] term.
@@ -43,6 +47,7 @@ def D_pq_term(n=100, w=1, hbar=1, m=1):
     I = np.eye(n, dtype=np.complex128)
     return np.kron(xp, I) + np.kron(I, px.T) - np.kron(x, p.T) - np.kron(p, x.T)
 
+@functools.cache
 def D_pp_term(n=100, w=1, hbar=1, m=1):
     '''
     Returns the matrix superoperator corresponding to the [x,[x,\rho]] term.
@@ -53,6 +58,7 @@ def D_pp_term(n=100, w=1, hbar=1, m=1):
     I = np.eye(n, dtype=np.complex128)
     return np.kron(xx, I) + np.kron(I, xx.T) - 2*np.kron(x, x.T)
 
+@functools.cache
 def D_qq_term(n=100, w=1, hbar=1, m=1):
     '''
     Returns the matrix superoperator corresponding to the [p,[p,\rho]] term.
@@ -65,6 +71,7 @@ def D_qq_term(n=100, w=1, hbar=1, m=1):
     
     return np.kron(pp, I) + np.kron(I, pp.T) - 2*np.kron(p, p.T)
 
+@functools.cache
 def H_term(n=100, w=1, hbar=1, m=1):
     H = SHO.H(n, w, hbar, m)
     I = np.eye(n, dtype=np.complex128)
@@ -85,10 +92,10 @@ def CL(n=100, w=1, hbar=1, m=1, gamma = .1, T= 1, **kwargs):
             )
 
 def GQFPE_SH(n=100, w=1, hbar=1, m=1, gamma=0.1, T=1, w_c=1, **kwargs):
-    gamma_s = gamma/w_c
     '''
     Returns the superoperator corresponding to the GQFPE in the high temperature, steady state limit
     '''
+    gamma_s = gamma/w_c
     coeff_A = -1j * gamma /(hbar * (1 - 2*gamma_s))
     coeff_D_pq = 2 * T * gamma_s/hbar**2 * (1 - 4*gamma_s)/(1-2*gamma_s)**2
     coeff_D_pp = -2*m*gamma*T/hbar**2 * (1 - 6 * gamma_s + 10 * gamma_s**2)/(1-2*gamma_s)**2
@@ -141,6 +148,90 @@ def GQFPE(t, n=100, w=1, hbar=1, m=1, gamma=0.1, T=1, w_c=1, **kwargs):
             + coeff_D_pp * D_pp_term(n, w, hbar, m) 
             + coeff_D_pq * D_pq_term(n, w, hbar, m) + coeff_D_qq * D_qq_term(n, w, hbar, m)
             )
+#---------------------------------Begin Interaction Picture functions -------------------------------
+
+def A_term_int(U, n=100, w=1, hbar=1, m=1):
+    '''
+    Returns the matrix superoperator corresponding to the [x,{p,\rho}] term,
+    in the interaction picture defined by :math:`U = e^{-i\hat{H}t/\hbar} `
+    '''
+    _, xp, px, _ = SHO.get_second_moments(n, w, hbar, m)
+    xp = np.conj(U.T) @ xp @ U
+    px = np.conj(U.T) @ px @ U
+    x = np.conj(U.T) @ SHO.x(n, w, hbar, m) @ U
+    p = np.conj(U.T) @ SHO.p(n, w, hbar, m) @ U
+    I = np.eye(n, dtype=np.complex128)
+    return np.kron(xp, I) + np.kron(x, p.T) - np.kron(p, x.T) - np.kron(I, px.T)  
+
+
+def D_pq_term_int(U, n=100, w=1, hbar=1, m=1):
+    '''
+    Returns the matrix superoperator corresponding to the [x,[p,\rho]] term.
+    '''
+    _, xp, px, _ = SHO.get_second_moments(n, w, hbar, m)
+    xp = np.conj(U.T) @ xp @ U
+    px = np.conj(U.T) @ px @ U
+    x = np.conj(U.T) @ SHO.x(n, w, hbar, m) @ U
+    p = np.conj(U.T) @ SHO.p(n, w, hbar, m) @ U
+    I = np.eye(n, dtype=np.complex128)
+    return np.kron(xp, I) + np.kron(I, px.T) - np.kron(x, p.T) - np.kron(p, x.T)
+
+def D_pp_term_int(U, n=100, w=1, hbar=1, m=1):
+    '''
+    Returns the matrix superoperator corresponding to the [x,[x,\rho]] term.
+    '''
+
+    xx, _, _, _ = SHO.get_second_moments(n, w, hbar, m)
+    xx = np.conj(U.T) @ xx @ U
+    x = np.conj(U.T) @ SHO.x(n, w, hbar, m) @ U
+    I = np.eye(n, dtype=np.complex128)
+    return np.kron(xx, I) + np.kron(I, xx.T) - 2*np.kron(x, x.T)
+
+def D_qq_term_int(U, n=100, w=1, hbar=1, m=1):
+    '''
+    Returns the matrix superoperator corresponding to the [p,[p,\rho]] term.
+    '''
+    _, _, _, pp = SHO.get_second_moments(n, w, hbar, m)
+    p = np.conj(U.T) @ SHO.p(n, w, hbar, m) @ U
+    pp = np.conj(U.T) @ pp @ U
+    I = np.eye(n, dtype=np.complex128)
+    #print(f"p is {p}")
+    #print(np.kron(pp, I), np.kron(I, pp.T), -2*np.kron(p, p.T))
+    
+    return np.kron(pp, I) + np.kron(I, pp.T) - 2*np.kron(p, p.T)
+
+def GQFPE_int(t, U, n=100, w=1, hbar=1, m=1, gamma=0.1, T=1, w_c=1, **kwargs):
+    '''
+    returns the GQFPE in the interaction picture with :math:`U = \mathcal{T}e^{-i\hbar \int_0^t\hat{H}(\tau) d\tau}`,
+    where the corresponding H(t) is defined in `H_term_int`.
+    '''  
+    gamma_s = gamma/w_c
+    coeff_A = -1j * gamma/hbar * Gamma(t, w_c = w_c, T = T, gamma_s = gamma_s)
+    coeff_D_pq = gamma/hbar * R_pq(t, w_c = w_c, T = T, gamma_s = gamma_s)
+    coeff_D_pp = -m * gamma**2/hbar * R_pp(t, w_c = w_c, T = T, gamma_s = gamma_s)
+    coeff_D_qq = -1/(m*hbar) * R_qq(t, w_c = w_c, T = T, gamma_s = gamma_s)
+    m_s = m * (1 - 2*gamma_s*F_2(t*w_c))
+   
+  #  print(f"H_eff_term, {H_eff_term(n, w, hbar, m, m_s)}")
+  #  print(f"gamma, {gamma}")
+  #  print(f"coeff_A, {coeff_A}")
+  #  print(f"coeff_D_pq {coeff_D_pq}")
+  #  print(f"coeff_D_pp {coeff_D_pp}")
+  #  print(f"coeff_D_qq {coeff_D_qq}")
+    
+    return (coeff_A * A_term_int(U, n, w, hbar, m) 
+            + coeff_D_pp * D_pp_term_int(U, n, w, hbar, m) 
+            + coeff_D_pq * D_pq_term_int(U, n, w, hbar, m) 
+            + coeff_D_qq * D_qq_term_int(U, n, w, hbar, m)
+            )
+
+
+def H_term_int(t, n=100, w=1, hbar=1, m=1, w_c=1, gamma=0.1, **kwargs):
+    gamma_s = gamma/w_c
+    m_es = m*(1-2*gamma_s*F_2(w_c*t))
+    H = SHO.H_eff(n, w, hbar, m, m_es)
+    return -1j/hbar * H
+
 #----------------------------------------------- Begin Jang Terms calculation------------------
 NUM_TERMS = 100000
 @numba.jit
@@ -211,7 +302,7 @@ def R_pq(t, w_c = 1, T = 1, gamma_s = 0.1):
 
 @numba.jit
 def R_qq(t, w_c = 1, T = 1, gamma_s = 0.1):
-    return gamma_s/r_m(t, gamma_s = gamma_s, w_c = w_c)**2*G_2(t*w_c, T_s = T/w_c)
+    return gamma_s/r_m(t, gamma_s = gamma_s, w_c = w_c)**2*G_2(t*w_c, T_s = T/w_c)/2
 
 @numba.jit
 def R_pp(t, w_c = 1, T = 1, gamma_s = 0.1):
@@ -633,3 +724,16 @@ def Ehrenfest_TD_inhom(t,gamma_e=1, w_c=10, T = 1, m=1,hbar=1,omega=1,n=30,time_
     inhom_vec[3,0] = 2*R_pq_t*hbar*gamma_e
     inhom_vec[4,0] = 2*hbar*m*gamma_e**2*R_pp_t
     return inhom_vec
+
+TD_funcs = [GQFPE]
+int_funcs = {
+        GQFPE_int:H_term_int
+        }
+
+def choose_prop_func(func):
+    if func in TD_funcs:
+        return 
+
+
+
+
