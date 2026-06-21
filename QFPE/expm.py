@@ -2,9 +2,10 @@
 Implementation of arnoldi iteration and other matrix exponentials
 '''
 
-import scipy
+import math
 import numpy as np
 import numba
+import scipy
 
 #@numba.jit(nopython=True)
 # def H(ndarray):
@@ -44,9 +45,14 @@ def arnoldi(A,b,n=75):
     return (Q@scipy.linalg.expm(H)@e(0,n=n)*np.linalg.norm(b)).reshape(-1,1)
 
 @numba.jit(forceobj=True)
-def arnoldi_2(A,b,n=75):
+def arnoldi_2(A, b, n=75):
+    Q, H = arnoldi_iteration(A, b.reshape(-1), n=n)
+    return (Q @ taylor(H, e(0, n=n), n=n) * np.linalg.norm(b)).reshape(-1,1)
+
+@numba.jit(forceobj=True)
+def arnoldi_3(A,b,n=75):
     Q,H = arnoldi_iteration(A,b.reshape(-1),n=n)
-    return (Q@taylor(H,e(0,n=n),n=n)*np.linalg.norm(b)).reshape(-1,1)
+    return (Q@taylor_old(H,e(0,n=n),n=n)*np.linalg.norm(b)).reshape(-1,1)
 
 # def arnoldi(A,b,n=100):
 #     if(n > A.shape[0]):
@@ -58,13 +64,25 @@ def arnoldi_2(A,b,n=75):
 #         #print(n)
 #     return (Q@scipy.linalg.expm(H)@e(0,n=n)*np.linalg.norm(b)).reshape(-1,1)
 
+@numba.jit(forceobj=True)
+def taylor(A, b, n=20):
+    #two_norm = np.linalg.norm(A, ord = 2)
+    #n = 2000
+    #while two_norm**n/np.math.factorial(n) > .1:
+    #    n += 50
+    #print(n, "is number of taylor series terms")
+    res = b.copy()
+    for i in range(n, 0, -1):
+        res = A @ (1/i * res) + b
+    return res
+
 
 @numba.jit(forceobj=True)
-def taylor(A,b,n=20):
+def taylor_old(A,b,n=20):
     result =b.copy()
     storage = A@b
     for i in range(1,n):
-        result += storage *1/np.complex128(np.math.factorial(i))
+        result += storage *1/np.complex128(math.factorial(i))
         storage = A@storage
     return result
 
